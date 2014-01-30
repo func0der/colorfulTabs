@@ -137,6 +137,10 @@ ctFirstRun: function(ctVersion)
 				break;
 			case 3:
 				//colorfulTabs.setTaBottomClr();
+				if (colorfulTabs.enabledomain) {
+					tab.linkedBrowser.addProgressListener(colorfulTabsUrlListener);
+				}
+
 				colorfulTabs.setColor(tab,colorfulTabs.uncoloredbgclr);
 			break;
 			}
@@ -144,9 +148,10 @@ ctFirstRun: function(ctVersion)
 	},
 	
 //resets tab color
-resetTabClr :function()
+resetTabClr :function(tab)
 	{
-	var clrObj = document.popupNode;
+		tab = tab || false;
+	var clrObj = tab || document.popupNode;
 	if(!clrObj)
 		{
 		clrObj = gBrowser.selectedTab;
@@ -584,6 +589,10 @@ calcTabClr:function(event)
 			break;
 		case 3:
 			//colorfulTabs.setTaBottomClr();
+			if (colorfulTabs.enabledomain) {
+				tab.linkedBrowser.addProgressListener(colorfulTabsUrlListener);
+			}
+
 			colorfulTabs.setColor(tab,colorfulTabs.uncoloredbgclr);
 		break;
 		}
@@ -1622,6 +1631,7 @@ var colorfulTabsUrlListener =
 			var url = tab.linkedBrowser.contentDocument.location;
 			var testWWW = /^www\.(.+\..+)$/.exec(host);
 			var colored = 0;			
+
 			if(colorfulTabs.enabledomain)
 				{
 				for (var i=0;i<colorfulTabs.dpref.length;i++)
@@ -1632,16 +1642,18 @@ var colorfulTabsUrlListener =
 						colored = 1;//set the flag that the domain got a color
 						}
 					}
-				if(colored == 0) //if  the domain didn't get a match, (preference - color unmatched domains)generate a default color?
+				if(colored == 0 && colorfulTabs.scheme === 2) //if  the domain didn't get a match, (preference - color unmatched domains)generate a default color?
 					{
 					tabClr = 'hsl('+Math.abs(colorfulTabs.clrHash(host))%360+','+colorfulTabs.sat+'%,'+colorfulTabs.lum+'%)';
 					}
 				}
 			else
 				{
-				tabClr = 'hsl('+Math.abs(colorfulTabs.clrHash(host))%360+','+colorfulTabs.sat+'%,'+colorfulTabs.lum+'%)';
+					tabClr = 'hsl('+Math.abs(colorfulTabs.clrHash(host))%360+','+colorfulTabs.sat+'%,'+colorfulTabs.lum+'%)';
 				}
-			colorfulTabs.setColor(tab,tabClr);
+			if (tabClr) {
+				colorfulTabs.setColor(tab,tabClr);
+			}
 			}
 		catch (e)
 			{
