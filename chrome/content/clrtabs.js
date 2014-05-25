@@ -14,6 +14,7 @@ var colorfulTabs =
 	isFlock:'',
 	clrAllTabsPopPref:'',
 	isMac:'',
+	isAustralis:'',
 	clrSession:window.navigator.userAgent.toLowerCase().indexOf('seamonkey')>=0?Components.classes["@mozilla.org/suite/sessionstore;1"].getService(Components.interfaces.nsISessionStore):Components.classes["@mozilla.org/browser/sessionstore;1"].getService(Components.interfaces.nsISessionStore),
 	adv:null,//advanced pref enabled?1:0;
 	satmax:null,//max saturation
@@ -34,24 +35,23 @@ var colorfulTabs =
 	uncoloredbgclr:'',
 	tabtextclr:'',
 	clrtabsInit: function()
-		{		
-		colorfulTabs.isMac = (window.navigator.userAgent.toLowerCase().indexOf('macintosh')>=0)?true:false;
-		if(colorfulTabs.isMac)
-			{
-			document.getElementById('main-window').className=document.getElementById('main-window').className+" mac";
-			}
+		{
+
+		colorfulTabs.cl("useragent="+window.navigator.userAgent.toLowerCase());
+
+
+
 		colorfulTabs.isFlock=(window.navigator.userAgent.toLowerCase().indexOf('flock')>=0)?true:false;
-		colorfulTabs.setCtPref();		
-		Components.utils.import("resource://gre/modules/AddonManager.jsm");		
+		colorfulTabs.setCtPref();
+		Components.utils.import("resource://gre/modules/AddonManager.jsm");
 		colorfulTabs.chkRestore();
 		colorfulTabs.showHideColorfulTabsStack();
-		document.addEventListener("TabOpen", colorfulTabs.calcTabClr, false);		
+		document.addEventListener("TabOpen", colorfulTabs.calcTabClr, false);
 		document.addEventListener("SSTabRestored",colorfulTabs.restoreTabClr,false);
 		document.addEventListener("TabClose", colorfulTabs.showHideColorfulTabsStack, false);
-		document.addEventListener("TabSelect", colorfulTabs.fadeAllTabs, false);
-		document.addEventListener("mouseover", colorfulTabs.effectMouseIn, false);
-		document.addEventListener("mouseout", colorfulTabs.effectMouseOut, false);
-		
+		document.addEventListener("TabSelect", colorfulTabs.setTaBottomClr, false);
+		document.addEventListener("TabSelect", colorfulTabs.setstandout, false);
+
 		try { gBrowser.mTabContainer.mAllTabsPopup.addEventListener("popupshowing", colorfulTabs.setMIcolor, false); } catch(e){} //seamonkey doesn't have tabs popup
 		colorfulTabs.initTabcontext();
 		colorfulTabs.setMinify();
@@ -59,30 +59,30 @@ var colorfulTabs =
 		},
 //first run
 frInit: function ()
-	{	
+	{
 	AddonManager.getAddonByID("{0545b830-f0aa-4d7e-8820-50a4629a56fe}", function(addon) {
 			colorfulTabs.newVersion = addon.version;
 			if ( colorfulTabs.ctVersion != colorfulTabs.newVersion)
-				{				
+				{
 				if(window.navigator.onLine )
 					{
-					colorfulTabs.ctFirstRun(colorfulTabs.newVersion)					
+					colorfulTabs.ctFirstRun(colorfulTabs.newVersion)
 					}
 				else
 					{
 					}
 				}
-			});	
-	},  
-	
+			});
+	},
+
 executeSoon: function(aFunc)
-	{	
+	{
 	var tm = Components.classes["@mozilla.org/thread-manager;1"].getService(Components.interfaces.nsIThreadManager);
 	tm.mainThread.dispatch(
 		{
 		run: function()
 			{
-			aFunc();	
+			aFunc();
 			}
 		},
 	Components.interfaces.nsIThread.DISPATCH_NORMAL);
@@ -103,7 +103,7 @@ ctFirstRun: function(ctVersion)
 	colorfulTabs.executeSoon(function(){gBrowser.selectedTab = gBrowser.addTab(clrUrl); });
 	Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch).setCharPref("extensions.clrtabs.firstrun", colorfulTabs.newVersion);
 	},
-	
+
 //checks if session restore is in progress
  chkRestore: function()
 	{
@@ -114,12 +114,12 @@ ctFirstRun: function(ctVersion)
 		tab = gBrowser.mTabContainer.childNodes[tn];
 		switch (colorfulTabs.scheme)
 			{
-			case 0:	
+			case 0:
 				if(colorfulTabs.clrSession.getTabValue(tab,"ctreadonly") == 1)
 					{
 					break;
 					}
-				tabClr = colorfulTabs.tabColors[colorfulTabs.clr%32];				
+				tabClr = colorfulTabs.tabColors[colorfulTabs.clr%32];
 				colorfulTabs.setColor(tab,tabClr);
 				colorfulTabs.clr++;
 				break;
@@ -132,7 +132,7 @@ ctFirstRun: function(ctVersion)
 					tabClr ='hsl('+Math.abs(colorfulTabs.clrHash(randkey))%360+','+clrSat+'%,'+clrLum+'%)';
 				colorfulTabs.setColor(tab,tabClr);
 				break;
-			case 2:				
+			case 2:
 				tab.linkedBrowser.addProgressListener(colorfulTabsUrlListener);
 				break;
 			case 3:
@@ -146,7 +146,7 @@ ctFirstRun: function(ctVersion)
 			}
 		}
 	},
-	
+
 //resets tab color
 resetTabClr :function(tab)
 	{
@@ -160,19 +160,19 @@ resetTabClr :function(tab)
 		{
 		clrObj=gBrowser.selectedTab;
 		}
-	
+
 		colorfulTabs.setColor(clrObj, "rgb(255,255,255)");
 		colorfulTabs.clrSession.setTabValue(clrObj, "ctreadonly", 0);
 	},
-	
-//also add ability to go to last tab	
+
+//also add ability to go to last tab
 clrScroll: function()
-	{	
+	{
 	gBrowser.mTabContainer.mTabstrip.ensureElementIsVisible(gBrowser.selectedTab, false);
 	},
 
 setDomainPref: function()
-	{	
+	{
 	var clrObj = document.popupNode;
 	if(!clrObj)
 		{
@@ -190,16 +190,16 @@ setDomainPref: function()
 		var domain = params.inn.domain;
 		colorfulTabs.setColor(clrObj, clrNewColor.toString());
 		colorfulTabs.clrSession.setTabValue(clrObj, "ctreadonly", 1);
-		
+
 		//merge domain preference
 		//does the domain already exist?change existing value:append the new domain to preset
 		var domainsPref = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch).getCharPref("extensions.clrtabs.dpref");
 		domainsPref = domainsPref.split("`");
-		var domainExists = 0;	
+		var domainExists = 0;
 		for(var i=0;i<domainsPref.length;i++)
 			{
 			if(domainsPref[i].split("~")[0].indexOf(domain) >= 0)
-				{				
+				{
 				domainsPref[i] = domain+'~'+clrNewColor.toString();
 				domainExists = 1;
 				}
@@ -208,15 +208,15 @@ setDomainPref: function()
 			{
 			domainsPref.push(domain+'~'+clrNewColor);
 			}
-		
+
 		domainsPref = domainsPref.join('`');
 		Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch).setCharPref("extensions.clrtabs.dpref",domainsPref);
 		}
 	else
 		{
-		}	
+		}
 	},
-	
+
 //initialises tabs' context menu as per pref.
 initTabcontext: function()
 	{
@@ -228,7 +228,7 @@ initTabcontext: function()
 		var clrMenu2 = document.createElement("menupopup");
 		clrMenu2.setAttribute("id","colorfulTabsContextPopup");
 		clrMenu1.appendChild(clrMenu2);
-		
+
 		var clrItemScroll = document.createElement("menuitem");
 		clrItemScroll.addEventListener("command",colorfulTabs.clrScroll,false);
 		clrItemScroll.setAttribute("label", "Go To Current Tab");
@@ -237,7 +237,7 @@ initTabcontext: function()
 		//clrItemScroll.setAttribute("acceltext", "Alt+Shift+C");
 		clrItemScroll.setAttribute("tooltiptext", "Scroll To The Currently Selected Tab {Or Use Shortcut Key: Alt+Shift+C}");
 		clrMenu2.appendChild(clrItemScroll);
-		
+
 		var clrItemRecolor = document.createElement("menuitem");
 		clrItemRecolor.addEventListener("command",colorfulTabs.regenClr,false);
 		clrItemRecolor.setAttribute("label", "Re-Color Tab");
@@ -246,42 +246,42 @@ initTabcontext: function()
 		//clrItemRecolor.setAttribute("acceltext", "Alt+Shift+R");
 		clrItemRecolor.setAttribute("tooltiptext", "Recolor The Tab {Or Use Shortcut Key: Alt+Shift+R}");
 		clrMenu2.appendChild(clrItemRecolor);
-		
+
 		var clrMenu3 = document.createElement("menuitem");
     	clrMenu3.addEventListener("command",colorfulTabs.setUserClr,false);
 		clrMenu3.setAttribute("label", "Change Tab Color");
 		clrMenu3.setAttribute("key", "colorfulTabsChangeTabColor");
 		//clrMenu3.setAttribute("acceltext", "Alt+Shift+I");
 		clrMenu2.appendChild(clrMenu3);
-		
+
 		var clrMenu3a = document.createElement("menuitem");
 		clrMenu3a.addEventListener("command",colorfulTabs.resetTabClr,false);
 		clrMenu3a.setAttribute("label", "Reset Color");
 		clrMenu3a.setAttribute("key", "colorfulTabsResetColor");
 		//clrMenu3a.setAttribute("acceltext", "Alt+Shift+U");
 		clrMenu2.appendChild(clrMenu3a);
-		
+
 		var clrMenu4 = document.createElement("menuitem");
 		clrMenu4.addEventListener("command",colorfulTabs.showOptions,false);
 		clrMenu4.setAttribute("key","colorfulTabsShowOptions",false);
 		clrMenu4.setAttribute("label", "Options");
 		clrMenu2.appendChild(clrMenu4);
-		
+
 		var clrMenu5 = document.createElement("menuitem");
 		clrMenu5.addEventListener("command",colorfulTabs.toggleMinify,false);
 		clrMenu5.setAttribute("label", "Mini-Mode");
 		clrMenu5.setAttribute("type", "checkbox");
 		clrMenu5.setAttribute("key", "colorfulTabsMinify");
 		clrMenu5.setAttribute("id", "colorfulTabsmini");
-		clrMenu2.appendChild(clrMenu5);		
-		
+		clrMenu2.appendChild(clrMenu5);
+
 		var ctSep = document.createElement("menuseparator");
 		ctSep.setAttribute('id','colorfulTabsSeparator');
 		window.getBrowser().mStrip.childNodes[1].appendChild(ctSep);
     	window.getBrowser().mStrip.childNodes[1].appendChild(clrMenu1);
-		
+
 		colorfulTabs.initDomainContext();
-		
+
 		}
 	else
 		{
@@ -308,16 +308,16 @@ initTabcontext: function()
 toggleMinify: function(){
 var prefs = Components.classes["@mozilla.org/preferences-service;1"]
                     .getService(Components.interfaces.nsIPrefService).getBranch("extensions.clrtabs.");
-    try {       
+    try {
         if(prefs.getBoolPref("minify") ==  true)
             {
 			prefs.setBoolPref("minify", false)
-			
-			}     
+
+			}
         else
             {
 			prefs.setBoolPref("minify", true)
-			
+
 			}
         }
     catch(e)
@@ -349,7 +349,7 @@ setMinify: function(){
 			colorfulTabs.cl(e);
 			}
 		}
-	if(colorfulTabs.minify == true) 
+	if(colorfulTabs.minify == true)
 		{
 		origClass = (origClass) ? (origClass+" "+"colorfultabs-minified") : ("colorfultabs-minified");
 		tabs.setAttribute("class", origClass);
@@ -423,7 +423,7 @@ showRecolor: function()
 			catch(e){colorfulTabs.cl(e);return;}
 			}
 		},
-		
+
 //generates a random color
 regenClr: function()
 	{
@@ -445,7 +445,7 @@ regenClr: function()
 	colorfulTabs.setColor(clrObj,tabClr);
 	colorfulTabs.clrSession.setTabValue(clrObj, "ctreadonly", 1);
 	},
-	
+
 //opens the ct. options box from the ctx menu
 showOptions: function()
 	{
@@ -464,23 +464,42 @@ showOptions: function()
 	var optionsURL = "chrome://clrtabs/content/clrtabsopt.xul";
 	openDialog(optionsURL, "", features);
 	} ,
-	
+
 //sets the initial prefs
 setCtPref: function()
 	{
+	//cl:     useragent=mozilla/5.0 (windows nt 6.2; wow64; rv:29.0) gecko/20100101 firefox/29.0
+	colorfulTabs.cl(window.navigator.userAgent);
+	colorfulTabs.isAustralis = (window.navigator.userAgent.toLowerCase().indexOf('firefox/29')>=0)?true:false;
+	if(colorfulTabs.isAustralis)
+		{
+		document.getElementById('main-window').className=document.getElementById('main-window').className+" australis";
+		el = document.getElementById('colorfulTabsStack');
+		parent = el.parentNode;
+		throwaway = el.parentNode.removeChild(el);
+		parent.insertBefore(throwaway, document.getElementById('nav-bar'));
+		}
+	colorfulTabs.isMac = (window.navigator.userAgent.toLowerCase().indexOf('macintosh')>=0)?true:false;
+		if(colorfulTabs.isMac)
+			{
+			document.getElementById('main-window').className=document.getElementById('main-window').className+" mac";
+			}
 	colorfulTabsPrefObserver.register();
 	colorfulTabsStackPrefObserver.register();
 	var clrprefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch);
 	try
 		{
-		colorfulTabs.minify = clrprefs.getBoolPref("extensions.clrtabs.minify");		
+		var ppref = clrprefs.getCharPref("extensions.clrtabs.ppref");
+		ppref = ppref.split('~');
+		colorfulTabs.tabColors = ppref;
+		colorfulTabs.minify = clrprefs.getBoolPref("extensions.clrtabs.minify");
 		colorfulTabs.txtshadow = clrprefs.getBoolPref("extensions.clrtabs.txtshadow");
 		colorfulTabs.tablabelblink = clrprefs.getBoolPref("extensions.clrtabs.tablabelblink");
 		colorfulTabs.dispStack = clrprefs.getBoolPref("extensions.clrtabs.dispstack");
 		colorfulTabs.currenttab = clrprefs.getBoolPref("extensions.clrtabs.currenttab");
-		colorfulTabs.currenttabclr = clrprefs.getCharPref("extensions.clrtabs.currenttabclr");		
+		colorfulTabs.currenttabclr = clrprefs.getCharPref("extensions.clrtabs.currenttabclr");
 		colorfulTabs.uncoloredbgclr = clrprefs.getCharPref("extensions.clrtabs.uncoloredbgclr");
-		colorfulTabs.tabtextclr = clrprefs.getCharPref("extensions.clrtabs.tabtextclr");	
+		colorfulTabs.tabtextclr = clrprefs.getCharPref("extensions.clrtabs.tabtextclr");
 		colorfulTabs.aggressive = clrprefs.getBoolPref("extensions.clrtabs.aggressive")?'important':'';
 		colorfulTabs.fadedeg = clrprefs.getIntPref("extensions.clrtabs.fadedeg");
 		colorfulTabs.scheme = clrprefs.getIntPref("extensions.clrtabs.scheme");
@@ -497,6 +516,8 @@ setCtPref: function()
 		colorfulTabs.tablabelblinkcss();
 		colorfulTabs.currenttabcss();
 		colorfulTabs.dispstackcss();
+		colorfulTabs.opacitycss();
+		colorfulTabs.setstandout();
 		colorfulTabs.adv = clrprefs.getBoolPref("extensions.clrtabs.advanced");
 		colorfulTabs.ctdebug = clrprefs.getBoolPref("extensions.clrtabs.consolelog");
 		if(colorfulTabs.adv==false)//satmax,satmin,lummax,lummin;
@@ -533,10 +554,10 @@ setCtPref: function()
 	catch(e)
 		{
 		colorfulTabs.cl('Error in setCtPref'+e)
-		
+
 		}
 	},
-	
+
 //calculates the tab clr based on the preferred algo.
 calcTabClr:function(event)
 	{
@@ -597,7 +618,7 @@ calcTabClr:function(event)
 		break;
 		}
 	},
-	
+
 //returns hsl for the passed rgb clr values
 get_hsl:function gethsl(r,g,b)
 	{
@@ -628,13 +649,13 @@ get_hsl:function gethsl(r,g,b)
 	l = Math.floor(l*100);
     return [h,s,l];
 	},
-	
+
 //takes a valid CSS color(?) and colors the tab with it.
 setColor:function(tab, tabClr)
 	{
 	//alert("caller is " + arguments.callee.caller.toString());
 	tabClr=tabClr.replace(/^\s+|\s+$/, '').replace(' ','');
-	tabClr=colorfulTabs.rgbclr(tabClr);	
+	tabClr=colorfulTabs.rgbclr(tabClr);
 	if(!colorfulTabs.isMac)
 		{
 		tab.style.setProperty('background-image','-moz-linear-gradient(rgba(255,255,255,.7),rgba('+tabClr+',.5),rgb('+tabClr+')),-moz-linear-gradient(rgb('+tabClr+'),rgb('+ tabClr+'))',colorfulTabs.aggressive);
@@ -646,7 +667,7 @@ setColor:function(tab, tabClr)
 		document.getAnonymousElementByAttribute(tab, "class", "tab-background-middle").style.setProperty('background-image',macClr,colorfulTabs.aggressive);
 		document.getAnonymousElementByAttribute(tab, "class", "tab-background-end").style.setProperty('background-image',macClr,colorfulTabs.aggressive);
 		}
-	
+
 	try
 		{
 		colorfulTabs.clrSession.setTabValue(tab, "tabClr", tabClr.toString()); //session doesn't initialize unless tabs are finished restoring, so this may not work for tabs whose color hasn't been saved in session
@@ -656,9 +677,10 @@ setColor:function(tab, tabClr)
 		colorfulTabs.cl('Error in setColor: '+e);
 		}
 	colorfulTabs.setMIcolor(tab,tabClr);
-	colorfulTabs.fadeAllTabs();
+	colorfulTabs.setstandout();
+	colorfulTabs.setTaBottomClr();
 	},
-	
+
 //takes a color and returns the array of r,g,b components like "255,0,0".
 //helps to use these colors to create rgba/gradients etc.
 //only rgb,hsl & color names are supported.
@@ -702,7 +724,7 @@ rgbclr:function(clr){
 					b = parseInt(b,16);
 					 r
 					}
-				
+
 				clr=r+","+g+","+b;
 				}
 			else
@@ -783,7 +805,7 @@ setMIcolor:function(tab, tabClr)
 			}
 		}
 	},
-	
+
 //restores a tabs color when a tab is restored
  restoreTabClr:function(event)
 	{
@@ -798,7 +820,7 @@ setMIcolor:function(tab, tabClr)
 		//colorfulTabs.regenClr();
 		}
 	},
-	
+
 //calculates a hash of passed string
  clrHash:function(clrString)
 	{
@@ -810,13 +832,13 @@ setMIcolor:function(tab, tabClr)
 		}
 	return clrConst;
 	},
-	
+
 //returns a random number between two given numbers (for customizable algo)
  clrRand:function(min,max)
 	{
 	return (Math.round(Math.random()*(max-min)))+min;
 	},
-	
+
 //manages the display of ctstack
 showHideColorfulTabsStack:function(event)
 	{
@@ -835,34 +857,34 @@ showHideColorfulTabsStack:function(event)
 		{
 		}
 	},
-	
+
 //hides the ctstack if less than 2 tabs
 hide_ctStack:function()
 	{
 	document.getElementById('colorfulTabsStack').style.setProperty('display','none','important');
 	},
-	
+
 //shows the ctstack if more than 1 tab
 show_ctStack:function()
 	{
 	document.getElementById('colorfulTabsStack').style.setProperty('display','-moz-stack','important');
 	},
-	
+
 //a formatted dump()
  cl:function(msg)
 	{
 	if(colorfulTabs.ctdebug) dump("\ncl:\t"+msg);
 	},
-	
+
 //fades a node
 fadeNode:function(node,opacity)
 	{
-	node.style.setProperty('opacity',opacity,'important');
+	//node.style.setProperty('opacity',opacity,'important');
 	},
-	
+
 //fades alltabs
 fadeAllTabs:function(event)
-	{	
+	{
 	try
 		{
 		var tblength = gBrowser.mTabContainer.childNodes.length;
@@ -870,11 +892,11 @@ fadeAllTabs:function(event)
 			{
 			if(colorfulTabs.fadedeg)
 				{
-				colorfulTabs.fadeNode(gBrowser.mTabContainer.childNodes[loop],(10-colorfulTabs.fadedeg)/10);
+				//colorfulTabs.fadeNode(gBrowser.mTabContainer.childNodes[loop],(10-colorfulTabs.fadedeg)/10);
 				}
 			else
 				{
-				colorfulTabs.fadeNode(gBrowser.mTabContainer.childNodes[loop],'1');
+				//colorfulTabs.fadeNode(gBrowser.mTabContainer.childNodes[loop],'1');
 				}
 			}
 		}
@@ -920,12 +942,12 @@ fadeAllTabs:function(event)
 			document.getAnonymousElementByAttribute(gBrowser.selectedTab, "class", "tab-background-middle").style.setProperty('background-image',macHClr,colorfulTabs.aggressive);
 			document.getAnonymousElementByAttribute(gBrowser.selectedTab, "class", "tab-background-end").style.setProperty('background-image',macHClr,colorfulTabs.aggressive);
 			}
-		}		
+		}
 	if(colorfulTabs.fadedeg)
 		{
 		try
 			{
-			colorfulTabs.fadeNode(gBrowser.selectedTab,"1");
+			//colorfulTabs.fadeNode(gBrowser.selectedTab,"1");
 			}
 		catch(e)
 			{
@@ -933,6 +955,47 @@ fadeAllTabs:function(event)
 			}
 		}
 	colorfulTabs.setTaBottomClr();
+	},
+setstandout:function(){
+	var tabClr;
+	try
+		{//remove highlighting from all other tabs
+		for(var count=0;count< gBrowser.mTabContainer.childNodes.length;count++)
+			{
+			tabClr = colorfulTabs.clrSession.getTabValue(gBrowser.mTabContainer.childNodes[count], "tabClr");
+			if(!colorfulTabs.isMac)
+				{
+				gBrowser.mTabContainer.childNodes[count].style.setProperty('background-image','-moz-linear-gradient(rgba(255,255,255,.7),rgba('+tabClr+',.5),rgb('+tabClr+')),-moz-linear-gradient(rgb('+tabClr+'),rgb('+ tabClr+'))',colorfulTabs.aggressive);
+				}
+			else
+				{
+				var macClr = '-moz-linear-gradient(rgba(255,255,255,0),rgb('+tabClr+')),-moz-linear-gradient(rgb('+tabClr+'),rgb('+ tabClr+'))';
+				document.getAnonymousElementByAttribute(gBrowser.mTabContainer.childNodes[count], "class", "tab-background-start").style.setProperty('background-image',macClr,colorfulTabs.aggressive);
+				document.getAnonymousElementByAttribute(gBrowser.mTabContainer.childNodes[count], "class", "tab-background-middle").style.setProperty('background-image',macClr,colorfulTabs.aggressive);
+				document.getAnonymousElementByAttribute(gBrowser.mTabContainer.childNodes[count], "class", "tab-background-end").style.setProperty('background-image',macClr,colorfulTabs.aggressive);
+				}
+			}
+		}
+	catch(e)
+		{
+		colorfulTabs.cl("\nColorfulTabs Error in function colorfulTabs.fadeAllTabs: "+e+". standout "+count2);
+		}
+	//add highlighting to the selected tab
+	tabClr = colorfulTabs.clrSession.getTabValue(gBrowser.selectedTab, "tabClr");
+	if(colorfulTabs.standout)
+		{
+		if(!colorfulTabs.isMac)
+			{
+			gBrowser.selectedTab.style.setProperty('background-image','-moz-linear-gradient(rgba(125,125,125,.1),rgba(225,225,225,.1),rgb('+tabClr+'),rgb('+ tabClr+')),-moz-linear-gradient(rgb('+tabClr+'),rgb('+ tabClr+'))',colorfulTabs.aggressive);
+			}
+		else
+			{
+			var macHClr = '-moz-linear-gradient(rgb('+tabClr+'),rgba('+tabClr+',.5),rgb('+tabClr+')),-moz-linear-gradient(white,white)';
+			document.getAnonymousElementByAttribute(gBrowser.selectedTab, "class", "tab-background-start").style.setProperty('background-image',macHClr,colorfulTabs.aggressive);
+			document.getAnonymousElementByAttribute(gBrowser.selectedTab, "class", "tab-background-middle").style.setProperty('background-image',macHClr,colorfulTabs.aggressive);
+			document.getAnonymousElementByAttribute(gBrowser.selectedTab, "class", "tab-background-end").style.setProperty('background-image',macHClr,colorfulTabs.aggressive);
+			}
+		}
 	},
 //sets the color of the tab-bottom strip
 setTaBottomClr:function()
@@ -944,10 +1007,10 @@ setTaBottomClr:function()
 		if(tabClr == ""){
 		transTab = true;
 		}
-		tabClr=tabClr.replace(/^\s+|\s+$/, '');		
+		tabClr=tabClr.replace(/^\s+|\s+$/, '');
 		if(!colorfulTabs.aggressive && colorfulTabs.currenttab)//currenttab is fixed color for selected tab
 			{
-			tabClr = colorfulTabs.rgbclr(colorfulTabs.currenttabclr);			
+			tabClr = colorfulTabs.rgbclr(colorfulTabs.currenttabclr);
 			}
 		if(transTab)
 			{
@@ -956,11 +1019,11 @@ setTaBottomClr:function()
 		else
 			{
 			document.getElementById('colorfulTabsStack').style.setProperty('background-color','rgb('+tabClr+')',colorfulTabs.aggressive);
-			}		 
+			}
 		}
 	catch(e){colorfulTabs.cl("Error in setTaBottomClr: "+e)}
 	},
-	
+
 //seamonkey specific function
 setSeamonkeyContainerBg:function(yes)
 	{
@@ -994,7 +1057,7 @@ setSeamonkeyContainerBg:function(yes)
 		colorfulTabs.cl('Error in setSeamonkeyContainerBg: '+e);
 		}
 	},
-	
+
 //highlights the unselected tab on mouseover
 effectMouseIn:function(event)
 	{
@@ -1006,11 +1069,11 @@ effectMouseIn:function(event)
 		colorfulTabs.fadeNode(event.target,1);
 		}
 	catch(e)
-		{		
+		{
 		colorfulTabs.cl('Error in effectMouseIn: '+e);
 		}
 	},
-	
+
 //highlights the unselected tab on mouseover
 effectMouseOut:function(event)
 	{
@@ -1025,7 +1088,7 @@ effectMouseOut:function(event)
 		{
 		}
 	},
-	
+
 //colors the tab with a user-chosen clr
 setUserClr:function()
 	{
@@ -1051,7 +1114,7 @@ setUserClr:function()
 		{
 		}
 	},
-	
+
 //super-secret algo :)
 SHA256:function(s)
 	{
@@ -1183,11 +1246,43 @@ dispstackcss: function()
 		{
 		if(colorfulTabs.dispStack)
 			{
-			clrSS.cssRules[7].style.setProperty('display','-moz-stack',colorfulTabs.aggressive);			
+			clrSS.cssRules[7].style.setProperty('display','-moz-stack',colorfulTabs.aggressive);
 			}
 		else
 			{
-			clrSS.cssRules[7].style.setProperty('display','none',colorfulTabs.aggressive);			
+			clrSS.cssRules[7].style.setProperty('display','none',colorfulTabs.aggressive);
+			}
+		}
+	catch(e){
+		colorfulTabs.cl(e);
+		}
+	},
+opacitycss: function()
+	{
+	var clrSS;
+	var clrPrefs = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefBranch).getCharPref("extensions.clrtabs.bgpicpath");
+	var ss = new Array();
+	var ss = document.styleSheets;
+	for (var i=0; i < ss.length; i++)
+		{
+		switch (ss[i].href)
+			{
+			case 'chrome://clrtabs/skin/prefs.css':
+				clrSS = ss[i];
+				break;
+			}
+		}
+	opacity = (10-colorfulTabs.fadedeg)/10;
+	try
+		{
+
+		if(colorfulTabs.fadedeg)
+			{
+			clrSS.cssRules[10].style.setProperty('opacity', opacity,colorfulTabs.aggressive);
+			}
+		else
+			{
+			clrSS.cssRules[10].style.setProperty('opacity','1',colorfulTabs.aggressive);
 			}
 		}
 	catch(e){
@@ -1212,12 +1307,12 @@ tabtextclrcss: function()
 	try
 		{
 		if(colorfulTabs.tabtextclr)
-			{			
-			clrSS.cssRules[0].style.setProperty('color',colorfulTabs.tabtextclr,colorfulTabs.aggressive);			
-			}		
+			{
+			clrSS.cssRules[0].style.setProperty('color',colorfulTabs.tabtextclr,colorfulTabs.aggressive);
+			}
 		}
 	catch(e){}
-	},	
+	},
 txtshadowcss: function()
 	{
 	var clrSS;
@@ -1245,7 +1340,7 @@ txtshadowcss: function()
 			{
 			clrSS.cssRules[0].style.setProperty('text-shadow',"none" ,colorfulTabs.aggressive );
 			clrSS.cssRules[1].style.setProperty('text-shadow','none',colorfulTabs.aggressive);
-			clrSS.cssRules[2].style.setProperty('text-shadow','none',colorfulTabs.aggressive);				
+			clrSS.cssRules[2].style.setProperty('text-shadow','none',colorfulTabs.aggressive);
 			}
 		}
 	catch(e)
@@ -1288,7 +1383,7 @@ tablabelblinkcss: function()
 		colorfulTabs.cl('Error in tablabelblinkcss: '+e);
 		}
 	},
-	
+
 /*
 handles fixed color for selected tab
 depending on agressive mode. Agressive mode determines whether this option is enabled or disabled
@@ -1312,13 +1407,13 @@ currenttabcss: function()
 			{
 			var sclr = colorfulTabs.rgbclr(colorfulTabs.currenttabclr);
 			if(colorfulTabs.currenttab && !colorfulTabs.aggressive)
-				{				
+				{
 				if(colorfulTabs.standout == true)
 					{
 					if(!colorfulTabs.isMac)
-						{						
+						{
 						clrSS.cssRules[3].style.setProperty('background-image','-moz-linear-gradient(rgba(125,125,125,.1),rgba(225,225,225,.1),rgb('+sclr+'),rgb('+ sclr+')),-moz-linear-gradient(rgb('+sclr+'),rgb('+ sclr+'))','important');
-							
+
 						}
 					else
 						{ // is a mac
@@ -1354,16 +1449,16 @@ currenttabcss: function()
 					clrSS.cssRules[4].style.removeProperty('background-image');
 					clrSS.cssRules[5].style.removeProperty('background-image');
 					clrSS.cssRules[6].style.removeProperty('background-image');
-					}		
+					}
 				}
-			colorfulTabs.setTaBottomClr();
+			//colorfulTabs.setTaBottomClr();
 			}
 		catch(e)
 			{
-			
+
 			colorfulTabs.cl('Error in currenttabcss: '+e);
 			}
-		},		
+		},
 wOpen:function(url)
 		{
 		var wm = Components.classes['@mozilla.org/appshell/window-mediator;1'].getService();
@@ -1376,7 +1471,7 @@ wOpen:function(url)
 			return;
 			}
 		},
-		
+
 //unregisters ct
 clrtabsUnload: function()
 		{
@@ -1384,7 +1479,7 @@ clrtabsUnload: function()
 		colorfulTabsPrefObserver.unregister();
 		}
 	}
-	
+
 var colorfulTabsStackPrefObserver =
 	{
 	register: function()
@@ -1424,7 +1519,7 @@ var colorfulTabsStackPrefObserver =
 			}
 		}
 	}
-	
+
 //ct pref observer
 var colorfulTabsPrefObserver =
 	{
@@ -1446,18 +1541,22 @@ var colorfulTabsPrefObserver =
 		var prefBranch = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService).getBranch("extensions.clrtabs.");
 		switch (aData)
 			{
+			case "ppref":var ppref = prefBranch.getCharPref("ppref");
+				ppref = ppref.split('~');
+				colorfulTabs.tabColors = ppref;
+				break;
 			case "txtshadow":
 				//enable disable the text glow via prefs.css
 				colorfulTabs.txtshadow = prefBranch.getBoolPref("txtshadow");
 				colorfulTabs.txtshadowcss();
-				break;				
-			case "uncoloredbgclr":	
-				colorfulTabs.uncoloredbgclr = prefBranch.getCharPref("uncoloredbgclr");			
 				break;
-			case "tabtextclr":			
-				colorfulTabs.tabtextclr = prefBranch.getCharPref("tabtextclr");			
+			case "uncoloredbgclr":
+				colorfulTabs.uncoloredbgclr = prefBranch.getCharPref("uncoloredbgclr");
+				break;
+			case "tabtextclr":
+				colorfulTabs.tabtextclr = prefBranch.getCharPref("tabtextclr");
 				colorfulTabs.tabtextclrcss();
-				break;		
+				break;
 			case "tablabelblink":
 				//enable disable the text glow via prefs.css
 				colorfulTabs.tablabelblink = prefBranch.getBoolPref("tablabelblink");
@@ -1470,18 +1569,18 @@ var colorfulTabsPrefObserver =
 			case "aggressive":
 				//enable disable the text glow via prefs.css
 				colorfulTabs.aggressive = prefBranch.getBoolPref("aggressive")?'important':'';
-				colorfulTabs.fadeAllTabs();
+				colorfulTabs.opacitycss();
 				colorfulTabs.currenttabcss();
-				break;				
+				break;
 			case "fadedeg":
-				colorfulTabs.fadedeg = prefBranch.getIntPref("fadedeg");				
-				colorfulTabs.fadeAllTabs();
+				colorfulTabs.fadedeg = prefBranch.getIntPref("fadedeg");
+				colorfulTabs.opacitycss();
 				break;
 			case "dispstack":
 				//enable disable the text glow via prefs.css
 				colorfulTabs.dispStack = prefBranch.getBoolPref("dispstack");
 				colorfulTabs.dispstackcss();
-				break;				
+				break;
 			case "currenttab":
 				//enable disable the text glow via prefs.css
 				colorfulTabs.currenttab = prefBranch.getBoolPref("currenttab");
@@ -1507,7 +1606,8 @@ var colorfulTabsPrefObserver =
 				break;
 			case "standout":
 				colorfulTabs.standout=prefBranch.getBoolPref("standout");
-				colorfulTabs.fadeAllTabs();
+				colorfulTabs.setstandout();
+				colorfulTabs.opacitycss();
 				colorfulTabs.currenttabcss();
 				break;
 			case "advanced":
@@ -1569,7 +1669,7 @@ var colorfulTabsPrefObserver =
 			colorfulTabs.setMIcolor();
 				break;
 			case "consolelog":
-				colorfulTabs.ctdebug = prefBranch.getBoolPref("consolelog");				
+				colorfulTabs.ctdebug = prefBranch.getBoolPref("consolelog");
 				break;
 			case "bgpic":
 				var togglePic = prefBranch.getBoolPref("bgpic");
@@ -1601,7 +1701,7 @@ var colorfulTabsPrefObserver =
 			}
 		}
 	}
-	
+
 //generates a color by the domain
 var colorfulTabsUrlListener =
 	{
@@ -1630,7 +1730,7 @@ var colorfulTabsUrlListener =
 			if(host.length == 0){host="about:blank"};
 			var url = tab.linkedBrowser.contentDocument.location;
 			var testWWW = /^www\.(.+\..+)$/.exec(host);
-			var colored = 0;			
+			var colored = 0;
 
 			if(colorfulTabs.enabledomain)
 				{
@@ -1689,8 +1789,8 @@ var colorfulTabsfrObserver = {
                 break;
             case 'user-interaction-active':
                 // every 5 seconds and immediately when user becomes active
-                //alert("active"); 
-                break;			
+                //alert("active");
+                break;
         }
     },
 
@@ -1739,7 +1839,7 @@ var colorfulTabsOptions1 = {
 		a.appendChild(c)
 		document.getElementById("domainrows").appendChild(a)
 		},
-		
+
 	//modifies the ct options box
 	changeUI:function(el,prompt)
 		{
@@ -1771,7 +1871,7 @@ var colorfulTabsOptions1 = {
 				}
 			}
 		},
-		
+
 	//sets domain prefs
 	setDomainPref:function()
 		{
@@ -1807,13 +1907,32 @@ var colorfulTabsOptions1 = {
 			a.appendChild(bb)
 			a.appendChild(c)
 			try{document.getElementById("domainrows").appendChild(a)}
-			catch(e){				
+			catch(e){
 				colorfulTabs.cl('Error in setDomainPref: '+e);
 				}
 			}
 		return true;
 		},
-		
+	setPalette:function()
+		{
+		dump('palette');
+		//Appends domain rows depending on preferences during preferencepane onload
+		var ppref = Components.classes["@mozilla.org/preferences-service;1"].getService(Components.interfaces.nsIPrefService).getBranch("extensions.clrtabs.").getCharPref("ppref");
+
+		var pprefUI = document.getElementById("palettecolors").getElementsByTagName("button");
+		ppref = ppref.split("~");
+		for(var i = 0 ; i < ppref.length ; i++)
+			{
+			try{
+				pprefUI[i].setAttribute('paletteclr',ppref[i]);
+				pprefUI[i].setAttribute('style',"background-color:" + ppref[i]);
+				}
+			catch(e){
+				colorfulTabs.cl('Error in setPalette: '+e);
+				}
+			}
+		return true;
+		},
 	//sets the text color
 	setTxtClr:function(id)
 		{
@@ -1821,7 +1940,7 @@ var colorfulTabsOptions1 = {
 		document.getElementById("clrTxt"+id).value = clr;
 		document.getElementById("clrPkr"+id).color = clr;
 		},
-		
+
 	//resets ct prefs
 	resetPref:function()
 		{
@@ -1830,13 +1949,21 @@ var colorfulTabsOptions1 = {
 		//	https://developer.mozilla.org/en/Preferences_System/preference>> methods throws exception if not a user value
 		try
 			{
-			try{ctPref.clearUserPref("extensions.clrtabs.advanced");}catch(e){};
-			colorfulTabsOptions1.adv_toggle_state(document.getElementById('adv').checked);
+			try
+				{
+				ctPref.clearUserPref("extensions.clrtabs.advanced");
+				}
+			catch(e)
+				{};
+			adv = ctPref.getBoolPref('extensions.clrtabs.advanced')
+			colorfulTabsOptions1.adv_toggle_state(adv);	//
+			document.getElementById('advenable').checked = adv;
 			}
 		catch(e)
-			{			
+			{
 			colorfulTabs.cl('Error in resetPref: '+e);
 			}
+
 		var scheme = ctPref.getIntPref("extensions.clrtabs.scheme")
 		if(scheme == 1)
 			{
@@ -1851,7 +1978,7 @@ var colorfulTabsOptions1 = {
 			try{ctPref.clearUserPref("extensions.clrtabs.lum");}catch(e){};
 			}
 		},
-		
+
 	//validates values
 	val:function(txtbox)
 		{
@@ -1865,13 +1992,13 @@ var colorfulTabsOptions1 = {
 			txtbox.value=parseInt(txtbox.value);
 			}
 		},
-		
+
 	//initializes adv prefs
 	advPrefInit:function()
 		{
 		colorfulTabsOptions1.adv_toggle_state(document.getElementById('advenable').checked,1);
 		},
-		
+
 	//detects when adv prefs have been toggled
 	adv_toggle_state:function(checked,caller)
 		{
@@ -1921,7 +2048,7 @@ var colorfulTabsOptions1 = {
 		catch(e){colorfulTabs.cl(e);}
 		return true;
 		},
-		
+
 	//sets sat and lum
 	setSatLum:function()
 		{
@@ -1958,7 +2085,7 @@ var colorfulTabsOptions1 = {
 			}
 		else {return;}
 		},
-		
+
 	//browse for a bg image
 	browsebgnd:function()
 		{
@@ -1979,7 +2106,7 @@ var colorfulTabsOptions1 = {
 			document.getElementById("clrBgPicPath").value = path;
 			}
 		},
-		
+
 	//load prefpane
 	clrPrefPaneLoad:function(event)
 		{

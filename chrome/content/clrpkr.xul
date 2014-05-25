@@ -4,16 +4,15 @@
 	id="clrAppPreferences"
 	title="Choose Tab Color"
 	xmlns="http://www.mozilla.org/keymaster/gatekeeper/there.is.only.xul"
-	style="background:#EEEEFF;"
 	buttons="accept,cancel"
 	ondialogaccept="return sendClr(1);"
 	ondialogcancel="return sendClr(0);"
 	onload="setClrpkr();"
         align="center"
 	>
-<groupbox id="prefclrpkr"  style="background-color: #FFEAFE;" align="center"> 
+<groupbox id="prefclrpkr"> 
 	   <description>Choose a color (double-click to quick select).</description>
-	   <colorpicker id="clrpkr" palettename="standard" onselect="setText();" ondblclick="{ setText(); sendClr(1); acceptDialog(); }" />
+	   <colorpicker type="button" id="clrpkr" palettename="standard" onchange="{ setText(); sendClr(1); acceptDialog(); }" />
 	   <description>OR</description>
 	   <description tooltiptext="e.g. '#FF88CC' OR 'rgb(255,155,75)'.">Enter color as Hex or RGB {like #FF88CC or rgb(255,155,75)}.</description>
 	   <textbox id="clrvalue"   size="19" oninput="setClr();" value="#" />

@@ -28,3 +28,12 @@ text-shadow: none !important;
     color:white ;
     }
 }
+
+#tabbrowser-tabs > tab.tabbrowser-tab {
+opacity:.5;
+}
+
+#tabbrowser-tabs > tab.tabbrowser-tab[selected=true],
+#tabbrowser-tabs > tab.tabbrowser-tab:hover {
+opacity:1 !important;
+}

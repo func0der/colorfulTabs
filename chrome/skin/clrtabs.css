@@ -47,3 +47,83 @@ max-width:48px;
 .colorfultabs-minified tab:not([pinned]) ~  tab:not([pinned]) {
 margin-left:0px;
 }
+
+
+.australis .tabbrowser-tab .tab-background-start,
+.australis .tabbrowser-tab .tab-background-end{
+display:none !important;
+}
+.australis .tabbrowser-tab .tab-background-middle {
+margin-left:0 !important;
+margin-right:0 !important;
+min-height:31px;
+}
+
+.australis .tabbrowser-tab .tab-background {
+margin-left:0;
+margin-right:0;
+}
+
+/**/
+
+.australis .tabbrowser-tab .tab-background-middle,
+.australis .tabbrowser-tab:hover .tab-background {
+background-image:none !important;
+background-color:transparent !important;
+}
+
+.australis .tabbrowser-tab {
+}
+.australis #colorfulTabsStack{
+ddisplay:none !important;
+border-top:1px solid white !important;
+position:relative;
+zz-index:9999;
+}
+.australis tab{
+border-top:1px solid white;
+border-left:1px solid white;
+border-right:1px solid white;
+border-top:1px solid ThreeDHighlight !important;
+border-left:1px solid ThreeDHighlight !important;
+border-right:1px solid ThreeDShadow !important;
+}
+
+.australis tab {
+
+}
+
+.australis tab[selected="true"] {
+
+}
+
+.australis #tabbrowser-tabs > .tabbrowser-tab[selected="true"][pinned] {
+padding-bottom: 1px !important; 
+}
+
+.australis .tabs-newtab-button {
+margin-left:0px;
+margin-right:0px;
+width:30px;
+border-top:1px solid transparent;
+border-right:1px solid transparent;
+}
+
+.australis .tabs-newtab-button:hover {
+background-image:none;
+background-color:highlight;
+border-top:1px solid ThreeDFace;
+border-right:1px solid ThreeDFace;
+border-color:ThreeDHighlight ThreeDShadow;
+}
+
+.mac.australis .tab-background-middle{
+border-left: 0 !important;
+border-right: 0 !important;
+}
+
+.mac.australis .tab-background-middle:not([selected=true]) {
+  clip-path: none !important;
+}
+
+.mac.australis #navigator-toolbox #colorfulTabsStack { height: 8px; border-top: 1px solid threedhighlight !important;}

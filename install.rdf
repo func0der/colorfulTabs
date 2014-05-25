@@ -5,13 +5,13 @@
   <RDF:Description RDF:about="rdf:#$lZf0J1"
                    em:id="{ec8030f7-c20a-464f-9b0e-13a3a9e97384}"
                    em:minVersion="13.0"
-                   em:maxVersion="26.*" />
+                   em:maxVersion="29.*" />
   <RDF:Description RDF:about="urn:mozilla:install-manifest"
                    em:id="{0545b830-f0aa-4d7e-8820-50a4629a56fe}"
                    em:unpack="true"
                    em:type="2"
                    em:name="ColorfulTabs"
-                   em:version="22.1"
+                   em:version="23.8"
                    em:creator="Shivanand Sharma"
                    em:description="Colorful Tabs colors every tab in a different color and makes them easy to distinguish while beautifying the overall appeal of the interface."
                    em:homepageURL="http://www.binaryturf.com/free-software/colorfultabs-for-firefox/"

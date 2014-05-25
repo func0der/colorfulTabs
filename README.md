@@ -3,6 +3,9 @@ colorfulTabs
 
 A firefox extension originally written by [binaryturf](http://www.binaryturf.com/free-software/colorfultabs-for-firefox/) with some modifications.
 
+## Base version
+ColorfulTabs 23.8
+
 ## Changes
  * Made it possible to colorize tabs by domain presets without coloring ALL tabs by domain hostname
 
